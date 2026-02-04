@@ -18,7 +18,7 @@ def extract_next_links(url, resp):
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
 
     # if we can't scrape, return empty list
-    if resp.status is not 200 or not is_valid(resp.url):
+    if resp.status != 200 or is_valid(resp.url) == False:
         return []
     
     next_links = []
@@ -26,16 +26,20 @@ def extract_next_links(url, resp):
     soup = BeautifulSoup(resp.raw_response.content, 'lxml')
     found_links = soup.find_all('a')
     for link in found_links:
-        print("debug link:", link)
+        # print("debug link:", link)
         # extract link
         href = link.get('href')
         absolute_url = urljoin(resp.url, href)
-        absolute_url = absolute_url._replace(fragment="")
+        # absolute_url = absolute_url.replace(fragment="")
 
         # if new url is valid, add to list
         if is_valid(absolute_url):
             next_links.append(absolute_url)
-
+        else:
+            # prints when url isn't considered valid
+            print("invalid url, outside of expected domain")
+    # debug that prints next links
+    print(next_links)
     return next_links
 
 def is_valid(url):
