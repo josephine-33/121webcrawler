@@ -1,4 +1,4 @@
 cbor
 requests
 beautifulsoup4
-urllib.parse
+lxml
