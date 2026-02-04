@@ -67,7 +67,7 @@ def is_valid(url):
         raise
 
 def within_domains(url):
-    allowed = ['ics.uci.edu/', 'cs.uci.edu/', 'informatics.uci.edu/', 'stat.uci.edu/']
+    allowed = ['ics.uci.edu', 'cs.uci.edu', 'informatics.uci.edu', 'stat.uci.edu']
     hostname = urlparse(url).netloc
     hostname = hostname.removeprefix('www.')
     if hostname not in allowed:
