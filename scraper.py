@@ -2,6 +2,7 @@ import re
 from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
 from utils.tokenizer import tokenize
+import urllib.robotparser as robotparser
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -59,7 +60,10 @@ def is_valid(url):
         if not within_domains(url):
             return False
         
-
+        # check if url is allowed by robots.txt
+        if not obeys_robots_rules(url):
+            return False
+        
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
@@ -111,3 +115,39 @@ def has_sufficient_content(resp, min_words=100, min_ratio=0.02):
     word_count = len(words)
     ratio = word_count / max(len(content), 1) # max used to prevent division by 0
     return word_count >= min_words and ratio >= min_ratio
+
+
+def obeys_robots_rules(url):
+    parsed = urlparse(url)
+    host = parsed.netloc.removeprefix("www.")
+    path = parsed.path
+
+    # informatics.uci.edu
+    inf_allowed_paths = ["/wp-admin/admin-ajax.php", "/research/labs-centers/", "/research/areas-of-expertise/", 
+                         "/research/example-research-projects/", "/research/phd-research/", "/research/past-dissertations/", 
+                         "/research/masters-research/", "/research/undergraduate-research/", "/research/gifts-grants/"]
+    
+    if host.endswith("informatics.uci.edu"):
+        if path.startswith("/research"):
+            if not any(path.startswith(p) for p in inf_allowed_paths):
+                return False
+        
+        if path.startswith("/wp-admin/") and not path.startswith("/wp-admin/admin-ajax.php"):
+            return False
+
+    # stat.uci.edu
+    if host.endswith("stat.uci.edu"):
+        if path.startswith("/people") or path.startswith("/happening"):
+            return False
+
+    # ics.uci.edu
+    if host.endswith("ics.uci.edu"):
+        if path.startswith("/people") or path.startswith("/happening"):
+            return False
+
+    # cs.uci.edu
+    if host.endswith("cs.uci.edu"):
+        if path.startswith("/people") or path.startswith("/happening"):
+            return False
+
+    return True
