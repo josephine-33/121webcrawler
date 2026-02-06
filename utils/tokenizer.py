@@ -1,0 +1,100 @@
+import sys
+
+def tokenize(file_path):
+    """
+    Docstring for tokenize
+    
+    :param file_path: path of text file to tokenize
+    Time Complexity: O(n) - Reads through text of file one time character by character
+    """
+    tokens = []
+    token = ""
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            while True:
+                char = file.read(1)
+                if not char:
+                    break
+                if ('a' <= char.lower() <= 'z') or ('0' <= char <= '9'):
+                    token += char.lower()
+                else:
+                    if token:
+                        tokens.append(token)
+                        token = ""
+            if token:
+                tokens.append(token)
+    except Exception:
+        return []
+
+    return tokens
+
+def compute_word_frequencies(tokens_list):
+    """
+    Docstring for compute_word_frequencies
+    
+    :param tokens_list: list of tokens from tokenize()
+    Time Complexity: O(n) - Iterates through tokens_list once
+    """
+    token_freqs = {}
+
+    for token in tokens_list:
+        if token in token_freqs:
+            token_freqs[token] += 1
+        else:
+            token_freqs[token] = 1
+
+    return token_freqs
+
+def print_tokens(token_freqs):
+    """
+    Docstring for print_tokens
+    
+    :param token_freqs: dictionary of tokens and their frequencies
+    Time Complexity: O(nlogn) - Sorts the dictionary first and then iterates through 
+    dictionary one time to print out each key/value pair
+    """
+
+    sorted_freqs = {token : freq for token, freq in sorted(token_freqs.items(), key=lambda item:item[1], reverse=True)}
+
+    for token, freq in sorted_freqs.items():
+        print(f"{token} - {freq}")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("FORMAT: python program.py text_file")
+        sys.exit(1)
+
+    text_file = sys.argv[1]
+    tokens = tokenize(text_file)
+    token_frequencies = compute_word_frequencies(tokens)
+    print_tokens(token_frequencies)
+
+
+# PART B
+
+def count_matching_tokens(file1, file2):
+    """
+    Docstring for count_matching_tokens
+    
+    :param file1: first text file
+    :param file2: second text file
+    Time complexity: O(n + u)
+        - tokenizes each file (O(n) + O(n) = O(n))
+        - convert tokens list to set (O(u) where u is # of unique tokens)
+    """
+    tokens1 = set(tokenize(file1))
+    tokens2 = set(tokenize(file2))
+    matching = tokens1.intersection(tokens2)
+    return len(matching)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("FORMAT: python program.py text_file1 text_file2")
+        sys.exit(1)
+
+    file1 = sys.argv[1]
+    file2 = sys.argv[2]
+    num_matching = count_matching_tokens(file1.strip(), file2.strip())
+    print(num_matching)
