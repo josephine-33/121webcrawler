@@ -1,6 +1,6 @@
 import sys
 
-def tokenize(file_path):
+def tokenize(readable_text):
     """
     Docstring for tokenize
     
@@ -11,19 +11,15 @@ def tokenize(file_path):
     token = ""
 
     try:
-        with open(file_path, "r", encoding="utf-8") as file:
-            while True:
-                char = file.read(1)
-                if not char:
-                    break
-                if ('a' <= char.lower() <= 'z') or ('0' <= char <= '9'):
-                    token += char.lower()
-                else:
-                    if token:
-                        tokens.append(token)
-                        token = ""
-            if token:
-                tokens.append(token)
+        for char in readable_text:
+            if ('a' <= char.lower() <= 'z') or ('0' <= char <= '9') or char == "'":
+                token += char.lower()
+            else:
+                if token:
+                    tokens.append(token)
+                    token = ""
+        if token:
+            tokens.append(token)
     except Exception:
         return []
 
@@ -60,15 +56,15 @@ def print_tokens(token_freqs):
     for token, freq in sorted_freqs.items():
         print(f"{token} - {freq}")
 
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("FORMAT: python program.py text_file")
-        sys.exit(1)
+# if __name__ == "__main__":
+#     if len(sys.argv) != 2:
+#         print("FORMAT: python program.py text_file")
+#         sys.exit(1)
 
-    text_file = sys.argv[1]
-    tokens = tokenize(text_file)
-    token_frequencies = compute_word_frequencies(tokens)
-    print_tokens(token_frequencies)
+#     text_file = sys.argv[1]
+#     tokens = tokenize(text_file)
+#     token_frequencies = compute_word_frequencies(tokens)
+#     print_tokens(token_frequencies)
 
 
 # PART B
@@ -89,12 +85,12 @@ def count_matching_tokens(file1, file2):
     return len(matching)
 
 
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("FORMAT: python program.py text_file1 text_file2")
-        sys.exit(1)
+# if __name__ == "__main__":
+#     if len(sys.argv) != 3:
+#         print("FORMAT: python program.py text_file1 text_file2")
+#         sys.exit(1)
 
-    file1 = sys.argv[1]
-    file2 = sys.argv[2]
-    num_matching = count_matching_tokens(file1.strip(), file2.strip())
-    print(num_matching)
+#     file1 = sys.argv[1]
+#     file2 = sys.argv[2]
+#     num_matching = count_matching_tokens(file1.strip(), file2.strip())
+#     print(num_matching)
