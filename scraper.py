@@ -1,6 +1,12 @@
 import re
 from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
+from utils.tokenizer import tokenize, compute_word_frequencies
+from itertools import islice
+
+longest_page_url = None
+longest_page_word_count = 0
+most_common_words = {}
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -21,9 +27,18 @@ def extract_next_links(url, resp):
     if resp.status != 200 or is_valid(resp.url) == False:
         return []
     
+    soup = BeautifulSoup(resp.raw_response.content, 'lxml')
+
+    # extracting tokens
+    readable_text = soup.get_text(separator=' ')
+    tokens = tokenize(readable_text)
+
+    # updating statistics
+    update_stats(url, tokens)
+    write_to_file()
+    
     next_links = []
 
-    soup = BeautifulSoup(resp.raw_response.content, 'lxml')
     found_links = soup.find_all('a')
     for link in found_links:
         # print("debug link:", link)
@@ -78,3 +93,37 @@ def within_domains(url):
     if hostname not in allowed:
         return False
     return True
+
+def update_stats(url, tokens):
+    global longest_page_url, longest_page_word_count, most_common_words
+    word_count = len(tokens)
+
+    # update longest page word count
+    if word_count > longest_page_word_count:
+        longest_page_word_count = word_count
+        longest_page_url = url
+
+    # update 50 most common words
+    word_freqs = compute_word_frequencies(tokens)
+    merge_frequencies(most_common_words, word_freqs)
+
+def merge_frequencies(global_word_freqs, word_freqs):
+    for token, count in word_freqs.items():
+        if token in global_word_freqs:
+            global_word_freqs[token] += count
+        else:
+            global_word_freqs[token] = count
+
+def write_to_file(file="crawler_statistics.txt"):
+    with open(file, "w") as f:
+        f.write("Longest page URL: ")
+        f.write(f"{longest_page_url} ({longest_page_word_count})\n\n")
+
+        f.write("50 most common words:\n")
+
+        # sort global word frequencies descending
+        sorted_freqs = {token : freq for token, freq in sorted(most_common_words.items(), key=lambda item:item[1], reverse=True)}
+
+        for word, freq in islice(sorted_freqs.items(), 50):
+            f.write(f"{word}: {freq}\n")
+
