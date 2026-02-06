@@ -1,6 +1,7 @@
 import re
 from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
+from utils.tokenizer import tokenize
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -21,8 +22,11 @@ def extract_next_links(url, resp):
     if resp.status != 200 or is_valid(resp.url) == False:
         return []
     
-    next_links = []
+    # if page is low-information, return empty list
+    if not has_sufficient_content(resp):
+        return []
 
+    next_links = []
     soup = BeautifulSoup(resp.raw_response.content, 'lxml')
     found_links = soup.find_all('a')
     for link in found_links:
@@ -56,7 +60,6 @@ def is_valid(url):
             return False
         
 
-
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
@@ -71,6 +74,7 @@ def is_valid(url):
         print ("TypeError for ", parsed)
         raise
 
+
 def within_domains(url):
     allowed = ['ics.uci.edu', 'cs.uci.edu', 'informatics.uci.edu', 'stat.uci.edu']
     hostname = urlparse(url).netloc
@@ -78,3 +82,32 @@ def within_domains(url):
     if hostname not in allowed:
         return False
     return True
+
+
+def has_sufficient_content(resp, min_words=100, min_ratio=0.02):
+    # returns True if the page has enough textual/informational content to be useful
+    if resp.raw_response is None or resp.raw_response.content is None:
+        return False
+    
+    content = resp.raw_response.content
+
+    # pages with small byte-size are probably low-information
+    # 404 error pages are typically 512 bytes
+    if len(content) <= 512:
+        return False
+    
+    # checking visible word count of the page for info as well
+    soup = BeautifulSoup(content, 'lxml')
+
+    # remove non-visible / non-informational elements
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+
+    # tokenize visible text 
+    visible_text = soup.get_text(separator=' ')
+    words = tokenize(visible_text)
+
+    # check if number of words and ratio of HTML to text is sufficient
+    word_count = len(words)
+    ratio = word_count / max(len(content), 1) # max used to prevent division by 0
+    return word_count >= min_words and ratio >= min_ratio
