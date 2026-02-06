@@ -1,5 +1,5 @@
 import re
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, urldefrag
 from bs4 import BeautifulSoup
 
 def scraper(url, resp):
@@ -16,8 +16,8 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-
     # if we can't scrape, return empty list
+
     if resp.status != 200 or is_valid(resp.url) == False:
         return []
     
@@ -29,8 +29,13 @@ def extract_next_links(url, resp):
         # print("debug link:", link)
         # extract link
         href = link.get('href')
+        
+        if not href:
+            continue
         absolute_url = urljoin(resp.url, href)
         # absolute_url = absolute_url.replace(fragment="")
+        absolute_url, fragment = urldefrag(absolute_url)
+        #  parsed = urlparse(url)
 
         # if new url is valid, add to list
         if is_valid(absolute_url):

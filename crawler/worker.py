@@ -1,5 +1,6 @@
 from threading import Thread
-
+import hashlib
+from urllib.parse import urlparse
 from inspect import getsource
 from utils.download import download
 from utils import get_logger
@@ -12,6 +13,7 @@ class Worker(Thread):
         self.logger = get_logger(f"Worker-{worker_id}", "Worker")
         self.config = config
         self.frontier = frontier
+        self.seen_urls = set()
         # basic check for requests in scraper
         assert {getsource(scraper).find(req) for req in {"from requests import", "import requests"}} == {-1}, "Do not use requests in scraper.py"
         assert {getsource(scraper).find(req) for req in {"from urllib.request import", "import urllib.request"}} == {-1}, "Do not use urllib.request in scraper.py"
@@ -29,6 +31,13 @@ class Worker(Thread):
                 f"using cache {self.config.cache_server}.")
             scraped_urls = scraper.scraper(tbd_url, resp)
             for scraped_url in scraped_urls:
+                parsed_url = urlparse(scraped_url)._replace(scheme='')
+                hashed_url = hashlib.sha256(parsed_url.encode('utf-8')).hexdigest()
+
+                if hashed_url in self.seen_urls:
+                    print(f"Hashed url already seen...skipping")
+                    continue
+                self.seen_urls.add(hashed_url)
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
