@@ -1,5 +1,6 @@
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
+from bs4 import BeautifulSoup
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -15,7 +16,31 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    return list()
+
+    # if we can't scrape, return empty list
+    if resp.status != 200 or is_valid(resp.url) == False:
+        return []
+    
+    next_links = []
+
+    soup = BeautifulSoup(resp.raw_response.content, 'lxml')
+    found_links = soup.find_all('a')
+    for link in found_links:
+        # print("debug link:", link)
+        # extract link
+        href = link.get('href')
+        absolute_url = urljoin(resp.url, href)
+        # absolute_url = absolute_url.replace(fragment="")
+
+        # if new url is valid, add to list
+        if is_valid(absolute_url):
+            next_links.append(absolute_url)
+        else:
+            # prints when url isn't considered valid
+            print("invalid url, outside of expected domain")
+    # debug that prints next links
+    print(next_links)
+    return next_links
 
 def is_valid(url):
     # Decide whether to crawl this url or not. 
@@ -25,6 +50,13 @@ def is_valid(url):
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
+        
+        # check if url is within the 4 specified domains
+        if not within_domains(url):
+            return False
+        
+
+
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
@@ -38,3 +70,11 @@ def is_valid(url):
     except TypeError:
         print ("TypeError for ", parsed)
         raise
+
+def within_domains(url):
+    allowed = ['ics.uci.edu', 'cs.uci.edu', 'informatics.uci.edu', 'stat.uci.edu']
+    hostname = urlparse(url).netloc
+    hostname = hostname.removeprefix('www.')
+    if hostname not in allowed:
+        return False
+    return True
