@@ -83,3 +83,85 @@ def within_domains(url):
     if hostname not in allowed:
         return False
     return True
+
+
+def has_sufficient_content(resp, min_words=100, min_ratio=0.02):
+    # returns True if the page has enough textual/informational content to be useful
+    if resp.raw_response is None or resp.raw_response.content is None:
+        return False
+    
+    content = resp.raw_response.content
+
+    # pages with small byte-size are probably low-information
+    # 404 error pages are typically 512 bytes
+    if len(content) <= 512:
+        return False
+    
+    # checking visible word count of the page for info as well
+    soup = BeautifulSoup(content, 'lxml')
+
+    # remove non-visible / non-informational elements
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+
+    # tokenize visible text 
+    visible_text = soup.get_text(separator=' ')
+    words = tokenize(visible_text)
+
+    # check if number of words and ratio of HTML to text is sufficient
+    word_count = len(words)
+    ratio = word_count / max(len(content), 1) # max used to prevent division by 0
+    return word_count >= min_words and ratio >= min_ratio
+
+
+def obeys_robots_rules(url):
+    parsed = urlparse(url)
+    host = parsed.netloc.removeprefix("www.")
+    path = parsed.path
+
+    # informatics.uci.edu
+    inf_allowed_paths = ["/wp-admin/admin-ajax.php", "/research/labs-centers/", "/research/areas-of-expertise/", 
+                         "/research/example-research-projects/", "/research/phd-research/", "/research/past-dissertations/", 
+                         "/research/masters-research/", "/research/undergraduate-research/", "/research/gifts-grants/"]
+    
+    if host.endswith("informatics.uci.edu"):
+        if path.startswith("/research"):
+            if not any(path.startswith(p) for p in inf_allowed_paths):
+                return False
+        
+        if path.startswith("/wp-admin/") and not path.startswith("/wp-admin/admin-ajax.php"):
+            return False
+
+    # stat.uci.edu
+    if host.endswith("stat.uci.edu"):
+        if path.startswith("/people") or path.startswith("/happening"):
+            return False
+
+    # ics.uci.edu
+    if host.endswith("ics.uci.edu"):
+        if path.startswith("/people") or path.startswith("/happening"):
+            return False
+
+    # cs.uci.edu
+    if host.endswith("cs.uci.edu"):
+        if path.startswith("/people") or path.startswith("/happening"):
+            return False
+
+    return True
+
+
+def is_not_known_trap(url):
+    trap_patterns = ["https://isg.ics.uci.edu/events/*", 
+                     "gitlab.ics.uci.edu",
+                     "http://fano.ics.uci.edu/ca/rules/",
+                     "/calendar", "/events"]
+
+    parsed = urlparse(url)
+    path = parsed.path.lower()
+    query = parsed.query.lower()
+
+    for pattern in trap_patterns:
+        if pattern in path or pattern in query:
+            return False
+        
+    return True
