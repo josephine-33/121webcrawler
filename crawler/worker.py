@@ -46,11 +46,10 @@ class Worker(Thread):
                     f"using cache {self.config.cache_server}.")
                 scraped_urls = scraper.scraper(tbd_url, resp)
                 for scraped_url in scraped_urls:
-                    parsed_url = urlparse(scraped_url)._replace(scheme='')
+                    parsed_url = urlparse(scraped_url)._replace(scheme='',fragment="")
                     url_str =  urlunparse(parsed_url)
                     hashed_url = hashlib.sha256(url_str.encode('utf-8')).hexdigest()
                     hashed_url_pattern = get_url_pattern_hash(scraped_url)
-                    
                     
 
                     if hashed_url in self.seen_urls:
