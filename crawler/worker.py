@@ -47,9 +47,6 @@ class Worker(Thread):
                     continue
                 self.seen_url_patterns[hashed_url_pattern] += 1
 
-                if hashed_url in self.seen_urls:
-                    print(f"Hashed url already seen...skipping")
-                    continue
                 self.seen_urls.add(hashed_url)
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
