@@ -89,6 +89,10 @@ def is_valid(url):
         if not obeys_robots_rules(url):
             return False
         
+        # check if known trap
+        if not is_not_known_trap(url):
+            return False
+        
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
