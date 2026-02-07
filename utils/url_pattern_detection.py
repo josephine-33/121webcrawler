@@ -1,3 +1,4 @@
+import hashlib
 import re
 from urllib.parse import urlparse, parse_qs
 
@@ -82,6 +83,9 @@ def get_url_pattern(url):
     query_str = "&".join(query_list) 
     return f"{domain}{path_str}?{query_str}"
     
+def hash_url_pattern(url_str):
+    return hashlib.sha256(url_str.encode('utf-8')).hexdigest()
+
 
         
 
