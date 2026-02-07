@@ -8,6 +8,8 @@ from utils import get_logger
 import scraper
 import time
 from collections import defaultdict
+import tldextract
+
 
 class Worker(Thread):
     def __init__(self, worker_id, config, frontier):
@@ -16,7 +18,9 @@ class Worker(Thread):
         self.frontier = frontier
         self.seen_urls = set()
         self.seen_url_patterns = defaultdict(int)
+        self.subdomains_count = defaultdict(int)
         self.MAX_URL_PATTERN_HITS = 250
+        self.MAX_SUBDOMAIN_HITS = 10000
         # basic check for requests in scraper
         assert {getsource(scraper).find(req) for req in {"from requests import", "import requests"}} == {-1}, "Do not use requests in scraper.py"
         assert {getsource(scraper).find(req) for req in {"from urllib.request import", "import urllib.request"}} == {-1}, "Do not use urllib.request in scraper.py"
@@ -38,12 +42,27 @@ class Worker(Thread):
                 url_str =  urlunparse(parsed_url)
                 hashed_url = hashlib.sha256(url_str.encode('utf-8')).hexdigest()
                 hashed_url_pattern = get_url_pattern_hash(scraped_url)
+                
+                
 
-                if self.seen_url_patterns[hashed_url_pattern] >= self.MAX_URL_PATTERN_HITS:
-                    print(f"Hashed url pattern reaached its limit")
-                    continue
                 if hashed_url in self.seen_urls:
                     print(f"Hashed url already seen...skipping")
+                    continue
+
+                if self.seen_url_patterns[hashed_url_pattern] >= self.MAX_URL_PATTERN_HITS:
+                    print(f"Hashed url pattern reaached its limit:", hashed_url_pattern)
+                    continue
+                
+                curr_subdomain = tldextract.extract(parsed_url.hostname).subdomain
+                if self.subdomains_count[curr_subdomain] >= self.MAX_SUBDOMAIN_HITS:
+                    print(f"Subdomain has reaached its limit:", subdomain)
+                    continue
+                
+                
+               
+                depth = len([segment for segment in parsed_url.path.split('/') if segment])
+                if depth >= 6:
+                    print(f"URL depth is 6 or more...skipping")
                     continue
                 self.seen_url_patterns[hashed_url_pattern] += 1
 

@@ -146,7 +146,7 @@ def write_to_file(file="crawler_statistics.txt"):
             f.write(f"{word}: {freq}\n")
 
 
-def has_sufficient_content(resp, min_words=100, min_ratio=0.02):
+def has_sufficient_content(resp, min_words=100, min_ratio=0.001):
     # returns True if the page has enough textual/informational content to be useful
     if resp.raw_response is None or resp.raw_response.content is None:
         return False
@@ -179,7 +179,7 @@ def is_not_known_trap(url):
     trap_patterns = ["https://isg.ics.uci.edu/events/*", 
                      "gitlab.ics.uci.edu",
                      "http://fano.ics.uci.edu/ca/rules/",
-                     "/calendar", "/events"]
+                     "/calendar"]
 
     parsed = urlparse(url)
     path = parsed.path.lower()

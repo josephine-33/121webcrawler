@@ -16,7 +16,7 @@ STOPWORDS = [
     "we", "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's", "when", "when's",
     "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "won't",
     "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself",
-    "yourselves"
+    "yourselves", "a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v", "w","x","y","z", "'"
 ]
 
 def tokenize(readable_text):
@@ -35,7 +35,8 @@ def tokenize(readable_text):
                 token += char.lower()
             else:
                 if token:
-                    tokens.append(token)
+                    if not token.isdigit():
+                        tokens.append(token)
                     token = ""
         if token:
             tokens.append(token)
