@@ -42,6 +42,10 @@ def extract_next_links(url, resp):
     # if page is low-information, return empty list
     if not has_sufficient_content(resp):
         return []
+    
+    # if page is marked too large by server, return empty list
+    if hasattr(resp, 'error') and resp.error and "607" in str(resp.error):
+        return []
 
     next_links = []
     soup = BeautifulSoup(resp.raw_response.content, 'lxml')
@@ -169,6 +173,23 @@ def has_sufficient_content(resp, min_words=100, min_ratio=0.02):
     word_count = len(words)
     ratio = word_count / max(len(content), 1) # max used to prevent division by 0
     return word_count >= min_words and ratio >= min_ratio
+
+
+def is_not_known_trap(url):
+    trap_patterns = ["https://isg.ics.uci.edu/events/*", 
+                     "gitlab.ics.uci.edu",
+                     "http://fano.ics.uci.edu/ca/rules/",
+                     "/calendar", "/events"]
+
+    parsed = urlparse(url)
+    path = parsed.path.lower()
+    query = parsed.query.lower()
+
+    for pattern in trap_patterns:
+        if pattern in path or pattern in query:
+            return False
+        
+    return True
 
 
 def obeys_robots_rules(url):
