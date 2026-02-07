@@ -179,7 +179,7 @@ def is_not_known_trap(url):
     trap_patterns = ["https://isg.ics.uci.edu/events/*", 
                      "gitlab.ics.uci.edu",
                      "http://fano.ics.uci.edu/ca/rules/",
-                     "/calendar"]
+                     "/calendar", "/events"]
 
     parsed = urlparse(url)
     path = parsed.path.lower()
