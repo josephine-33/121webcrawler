@@ -68,9 +68,10 @@ def drop_control_query_params(query_dict):
 
     
 
-
+def hash_url_pattern(url_str):
+    return hashlib.sha256(url_str.encode('utf-8')).hexdigest()
     
-def get_url_pattern(url):
+def get_url_pattern_hash(url):
     """convert url string to url pattern """
     domain, path, query_str_dict = get_url_parts(url)
 
@@ -80,16 +81,19 @@ def get_url_pattern(url):
  
     path_str = '/'.join(path_list)
     query_str = "&".join(query_list) 
-    return f"{domain}{path_str}?{query_str}"
+    url_pattern = f"{domain}{path_str}?{query_str}"
+    return hash_url_pattern(url_pattern)
     
+
+
 
         
 
 
 
 if __name__=="__main__":
-    get_url_pattern("https://ics.uci.edu/events?qparam1=123&qparam2=45def&qparam3=3a269590-909d-431b-8bdf-516b02bd181f")
-    get_url_pattern("https://ics.uci.edu/event/master-of-computer-science-information-session-02-09-26/")
-    get_url_pattern("https://uci.zoom.us/meeting/register/l39e8nu_Qy-CT5pi0VeL_g#/registration")
-    get_url_pattern("https://edstem.org/us/courses/90198/discussion/7629727")
-    get_url_pattern("https://mail.google.com/mail/u/0/#inbox")
+    get_url_pattern_hash("https://ics.uci.edu/events?qparam1=123&qparam2=45def&qparam3=3a269590-909d-431b-8bdf-516b02bd181f")
+    get_url_pattern_hash("https://ics.uci.edu/event/master-of-computer-science-information-session-02-09-26/")
+    get_url_pattern_hash("https://uci.zoom.us/meeting/register/l39e8nu_Qy-CT5pi0VeL_g#/registration")
+    get_url_pattern_hash("https://edstem.org/us/courses/90198/discussion/7629727")
+    get_url_pattern_hash("https://mail.google.com/mail/u/0/#inbox")
