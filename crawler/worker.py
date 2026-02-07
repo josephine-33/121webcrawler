@@ -1,6 +1,6 @@
 from threading import Thread
 import hashlib
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 from inspect import getsource
 from utils.download import download
 from utils.url_pattern_detection import get_url_pattern_hash
@@ -35,8 +35,9 @@ class Worker(Thread):
             scraped_urls = scraper.scraper(tbd_url, resp)
             for scraped_url in scraped_urls:
                 parsed_url = urlparse(scraped_url)._replace(scheme='')
-                hashed_url = hashlib.sha256(parsed_url.encode('utf-8')).hexdigest()
-                hashed_url_pattern = get_url_pattern_hash()
+                url_str =  urlunparse(parsed_url)
+                hashed_url = hashlib.sha256(url_str.encode('utf-8')).hexdigest()
+                hashed_url_pattern = get_url_pattern_hash(scraped_url)
 
                 if self.seen_url_patterns[hashed_url_pattern] >= self.MAX_URL_PATTERN_HITS:
                     print(f"Hashed url pattern reaached its limit")
@@ -44,7 +45,7 @@ class Worker(Thread):
                 if hashed_url in self.seen_urls:
                     print(f"Hashed url already seen...skipping")
                     continue
-                hashed_url_pattern[self.seen_url_patterns] += 1
+                self.seen_url_patterns[hashed_url_pattern] += 1
 
                 if hashed_url in self.seen_urls:
                     print(f"Hashed url already seen...skipping")
