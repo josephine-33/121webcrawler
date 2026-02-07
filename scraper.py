@@ -1,7 +1,12 @@
 import re
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, urldefrag
 from bs4 import BeautifulSoup
-from utils.tokenizer import tokenize
+from utils.tokenizer import tokenize, compute_word_frequencies
+from itertools import islice
+
+longest_page_url = None
+longest_page_word_count = 0
+most_common_words = {}
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -17,11 +22,23 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-
     # if we can't scrape, return empty list
+
     if resp.status != 200 or is_valid(resp.url) == False:
         return []
     
+    soup = BeautifulSoup(resp.raw_response.content, 'lxml')
+
+    # extracting tokens
+    readable_text = soup.get_text(separator=' ')
+    tokens = tokenize(readable_text)
+
+    # updating statistics
+    update_stats(url, tokens)
+    write_to_file()
+    
+    next_links = []
+
     # if page is low-information, return empty list
     if not has_sufficient_content(resp):
         return []
@@ -37,8 +54,13 @@ def extract_next_links(url, resp):
         # print("debug link:", link)
         # extract link
         href = link.get('href')
+        
+        if not href:
+            continue
         absolute_url = urljoin(resp.url, href)
         # absolute_url = absolute_url.replace(fragment="")
+        absolute_url, fragment = urldefrag(absolute_url)
+        #  parsed = urlparse(url)
 
         # if new url is valid, add to list
         if is_valid(absolute_url):
@@ -63,7 +85,10 @@ def is_valid(url):
         if not within_domains(url):
             return False
         
-
+        # check if url is allowed by robots.txt
+        if not obeys_robots_rules(url):
+            return False
+        
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
@@ -86,6 +111,39 @@ def within_domains(url):
     if hostname not in allowed:
         return False
     return True
+
+def update_stats(url, tokens):
+    global longest_page_url, longest_page_word_count, most_common_words
+    word_count = len(tokens)
+
+    # update longest page word count
+    if word_count > longest_page_word_count:
+        longest_page_word_count = word_count
+        longest_page_url = url
+
+    # update 50 most common words
+    word_freqs = compute_word_frequencies(tokens)
+    merge_frequencies(most_common_words, word_freqs)
+
+def merge_frequencies(global_word_freqs, word_freqs):
+    for token, count in word_freqs.items():
+        if token in global_word_freqs:
+            global_word_freqs[token] += count
+        else:
+            global_word_freqs[token] = count
+
+def write_to_file(file="crawler_statistics.txt"):
+    with open(file, "w") as f:
+        f.write("Longest page URL: ")
+        f.write(f"{longest_page_url} ({longest_page_word_count})\n\n")
+
+        f.write("50 most common words:\n")
+
+        # sort global word frequencies descending
+        sorted_freqs = {token : freq for token, freq in sorted(most_common_words.items(), key=lambda item:item[1], reverse=True)}
+
+        for word, freq in islice(sorted_freqs.items(), 50):
+            f.write(f"{word}: {freq}\n")
 
 
 def has_sufficient_content(resp, min_words=100, min_ratio=0.02):
@@ -131,4 +189,40 @@ def is_not_known_trap(url):
         if pattern in path or pattern in query:
             return False
         
+    return True
+
+
+def obeys_robots_rules(url):
+    parsed = urlparse(url)
+    host = parsed.netloc.removeprefix("www.")
+    path = parsed.path
+
+    # informatics.uci.edu
+    inf_allowed_paths = ["/wp-admin/admin-ajax.php", "/research/labs-centers/", "/research/areas-of-expertise/", 
+                         "/research/example-research-projects/", "/research/phd-research/", "/research/past-dissertations/", 
+                         "/research/masters-research/", "/research/undergraduate-research/", "/research/gifts-grants/"]
+    
+    if host.endswith("informatics.uci.edu"):
+        if path.startswith("/research"):
+            if not any(path.startswith(p) for p in inf_allowed_paths):
+                return False
+        
+        if path.startswith("/wp-admin/") and not path.startswith("/wp-admin/admin-ajax.php"):
+            return False
+
+    # stat.uci.edu
+    if host.endswith("stat.uci.edu"):
+        if path.startswith("/people") or path.startswith("/happening"):
+            return False
+
+    # ics.uci.edu
+    if host.endswith("ics.uci.edu"):
+        if path.startswith("/people") or path.startswith("/happening"):
+            return False
+
+    # cs.uci.edu
+    if host.endswith("cs.uci.edu"):
+        if path.startswith("/people") or path.startswith("/happening"):
+            return False
+
     return True
