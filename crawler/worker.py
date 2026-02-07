@@ -36,46 +36,49 @@ class Worker(Thread):
     def run(self):
         while True:
             tbd_url = self.frontier.get_tbd_url()
-            if not tbd_url:
-                self.logger.info("Frontier is empty. Stopping Crawler.")
-                break
-            resp = download(tbd_url, self.config, self.logger)
-            self.logger.info(
-                f"Downloaded {tbd_url}, status <{resp.status}>, "
-                f"using cache {self.config.cache_server}.")
-            scraped_urls = scraper.scraper(tbd_url, resp)
-            for scraped_url in scraped_urls:
-                parsed_url = urlparse(scraped_url)._replace(scheme='')
-                url_str =  urlunparse(parsed_url)
-                hashed_url = hashlib.sha256(url_str.encode('utf-8')).hexdigest()
-                hashed_url_pattern = get_url_pattern_hash(scraped_url)
-                
-                
+            try:
+                if not tbd_url:
+                    self.logger.info("Frontier is empty. Stopping Crawler.")
+                    break
+                resp = download(tbd_url, self.config, self.logger)
+                self.logger.info(
+                    f"Downloaded {tbd_url}, status <{resp.status}>, "
+                    f"using cache {self.config.cache_server}.")
+                scraped_urls = scraper.scraper(tbd_url, resp)
+                for scraped_url in scraped_urls:
+                    parsed_url = urlparse(scraped_url)._replace(scheme='')
+                    url_str =  urlunparse(parsed_url)
+                    hashed_url = hashlib.sha256(url_str.encode('utf-8')).hexdigest()
+                    hashed_url_pattern = get_url_pattern_hash(scraped_url)
+                    
+                    
 
-                if hashed_url in self.seen_urls:
-                    print(f"Hashed url already seen...skipping")
-                    continue
+                    if hashed_url in self.seen_urls:
+                        print(f"Hashed url already seen...skipping")
+                        continue
 
-                if self.seen_url_patterns[hashed_url_pattern] >= self.MAX_URL_PATTERN_HITS:
-                    print(f"Hashed url pattern reaached its limit:", hashed_url_pattern)
-                    continue
+                    if self.seen_url_patterns[hashed_url_pattern] >= self.MAX_URL_PATTERN_HITS:
+                        print(f"Hashed url pattern reaached its limit:", hashed_url_pattern)
+                        continue
+                    
+                    curr_subdomain = tldextract.extract(parsed_url.hostname).subdomain
+                    if self.subdomains_count[curr_subdomain] >= self.MAX_SUBDOMAIN_HITS:
+                        print(f"Subdomain has reaached its limit:", subdomain)
+                        continue
+                    
+                    self.subdomains_count[curr_subdomain] += 1
                 
-                curr_subdomain = tldextract.extract(parsed_url.hostname).subdomain
-                if self.subdomains_count[curr_subdomain] >= self.MAX_SUBDOMAIN_HITS:
-                    print(f"Subdomain has reaached its limit:", subdomain)
-                    continue
-                
-                self.subdomains_count[curr_subdomain] += 1
-               
-                depth = len([segment for segment in parsed_url.path.split('/') if segment])
-                if depth >= 6:
-                    print(f"URL depth is 6 or more...skipping")
-                    continue
-                self.seen_url_patterns[hashed_url_pattern] += 1
+                    depth = len([segment for segment in parsed_url.path.split('/') if segment])
+                    if depth >= 6:
+                        print(f"URL depth is 6 or more...skipping")
+                        continue
+                    self.seen_url_patterns[hashed_url_pattern] += 1
 
-                self.seen_urls.add(hashed_url)
-                if len(self.seen_urls) % 10 == 0:
-                    self.write_stats()
-                self.frontier.add_url(scraped_url)
-            self.frontier.mark_url_complete(tbd_url)
-            time.sleep(self.config.time_delay)
+                    self.seen_urls.add(hashed_url)
+                    if len(self.seen_urls) % 10 == 0:
+                        self.write_stats()
+                    self.frontier.add_url(scraped_url)
+                self.frontier.mark_url_complete(tbd_url)
+                time.sleep(self.config.time_delay)
+            except Exception:
+                continue
