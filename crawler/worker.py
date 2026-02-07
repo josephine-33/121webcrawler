@@ -3,10 +3,11 @@ import hashlib
 from urllib.parse import urlparse
 from inspect import getsource
 from utils.download import download
+from utils.url_pattern_detection import get_url_pattern_hash
 from utils import get_logger
 import scraper
 import time
-
+from collections import defaultdict
 
 class Worker(Thread):
     def __init__(self, worker_id, config, frontier):
@@ -14,6 +15,8 @@ class Worker(Thread):
         self.config = config
         self.frontier = frontier
         self.seen_urls = set()
+        self.seen_url_patterns = defaultdict(int)
+        self.MAX_URL_PATTERN_HITS = 250
         # basic check for requests in scraper
         assert {getsource(scraper).find(req) for req in {"from requests import", "import requests"}} == {-1}, "Do not use requests in scraper.py"
         assert {getsource(scraper).find(req) for req in {"from urllib.request import", "import urllib.request"}} == {-1}, "Do not use urllib.request in scraper.py"
@@ -33,6 +36,15 @@ class Worker(Thread):
             for scraped_url in scraped_urls:
                 parsed_url = urlparse(scraped_url)._replace(scheme='')
                 hashed_url = hashlib.sha256(parsed_url.encode('utf-8')).hexdigest()
+                hashed_url_pattern = get_url_pattern_hash()
+
+                if self.seen_url_patterns[hashed_url_pattern] >= self.MAX_URL_PATTERN_HITS:
+                    print(f"Hashed url pattern reaached its limit")
+                    continue
+                if hashed_url in self.seen_urls:
+                    print(f"Hashed url already seen...skipping")
+                    continue
+                hashed_url_pattern[self.seen_url_patterns] += 1
 
                 if hashed_url in self.seen_urls:
                     print(f"Hashed url already seen...skipping")
