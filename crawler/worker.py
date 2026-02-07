@@ -9,7 +9,7 @@ import scraper
 import time
 from collections import defaultdict
 import tldextract
-
+import json
 
 class Worker(Thread):
     def __init__(self, worker_id, config, frontier):
@@ -19,13 +19,20 @@ class Worker(Thread):
         self.seen_urls = set()
         self.seen_url_patterns = defaultdict(int)
         self.subdomains_count = defaultdict(int)
+        self.counts_stats_file = "count_stats.txt"
         self.MAX_URL_PATTERN_HITS = 250
         self.MAX_SUBDOMAIN_HITS = 10000
         # basic check for requests in scraper
         assert {getsource(scraper).find(req) for req in {"from requests import", "import requests"}} == {-1}, "Do not use requests in scraper.py"
         assert {getsource(scraper).find(req) for req in {"from urllib.request import", "import urllib.request"}} == {-1}, "Do not use urllib.request in scraper.py"
         super().__init__(daemon=True)
-        
+    def write_stats(self):
+        data = {
+            "num_urls": len(self.seen_urls),
+            "subdomain_count": dict(self.subdomains_count)
+        }
+        with open(self.counts_stats_file, "w") as f:
+            json.dump(data, f, indent=4) 
     def run(self):
         while True:
             tbd_url = self.frontier.get_tbd_url()
@@ -58,7 +65,7 @@ class Worker(Thread):
                     print(f"Subdomain has reaached its limit:", subdomain)
                     continue
                 
-                
+                self.subdomains_count[curr_subdomain] += 1
                
                 depth = len([segment for segment in parsed_url.path.split('/') if segment])
                 if depth >= 6:
@@ -67,6 +74,8 @@ class Worker(Thread):
                 self.seen_url_patterns[hashed_url_pattern] += 1
 
                 self.seen_urls.add(hashed_url)
+                if len(self.seen_urls) % 10 == 0:
+                    self.write_stats()
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
