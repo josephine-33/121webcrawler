@@ -1,5 +1,6 @@
 from threading import Thread
-
+import hashlib
+from urllib.parse import urlparse
 from inspect import getsource
 from utils.download import download
 from utils.url_pattern_detection import get_url_pattern_hash
@@ -44,6 +45,10 @@ class Worker(Thread):
                     print(f"Hashed url already seen...skipping")
                     continue
                 hashed_url_pattern[self.seen_url_patterns] += 1
+
+                if hashed_url in self.seen_urls:
+                    print(f"Hashed url already seen...skipping")
+                    continue
                 self.seen_urls.add(hashed_url)
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
