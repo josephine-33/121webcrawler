@@ -20,7 +20,7 @@ class Worker(Thread):
         self.seen_url_patterns = defaultdict(int)
         self.subdomains_count = defaultdict(int)
         self.counts_stats_file = "count_stats.txt"
-        self.MAX_URL_PATTERN_HITS = 250
+        self.MAX_URL_PATTERN_HITS = 500
         self.MAX_SUBDOMAIN_HITS = 10000
         # basic check for requests in scraper
         assert {getsource(scraper).find(req) for req in {"from requests import", "import requests"}} == {-1}, "Do not use requests in scraper.py"
